@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试项目时间提取工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .description {
+            font-size: 16px;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        
+        .input-section, .result-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+        }
+        
+        .input-section {
+            border-right: 1px solid #eee;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 400px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .file-upload {
+            margin-bottom: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f6fc;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f7fd;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .export-btn {
+            background-color: #27ae60;
+            margin-top: 10px;
+        }
+        
+        .export-btn:hover {
+            background-color: #219653;
+        }
+        
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .duration-short {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .duration-medium {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .duration-long {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .summary {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .summary h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .summary p {
+            margin-bottom: 5px;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .input-section {
+                border-right: none;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>日志测试项目时间提取工具</h1>
+            <p class="description">提取日志中的测试项目及其开始时间、结束时间和耗时</p>
+        </header>
+        
+        <div class="instructions">
+            <h3>使用说明</h3>
+            <ul>
+                <li>将日志内容粘贴到左侧文本区域，或直接上传日志文件</li>
+                <li>点击"提取测试时间"按钮进行分析</li>
+                <li>结果将以表格形式展示，包含测试项目、开始时间、结束时间和耗时</li>
+                <li>耗时根据时长以不同颜色显示：绿色(&lt;1秒)，橙色(1-3秒)，红色(&gt;3秒)</li>
+                <li>可以导出结果为CSV文件</li>
+            </ul>
+        </div>
+        
+        <div class="content">
+            <div class="input-section">
+                <h2 class="section-title">输入日志</h2>
+                <div class="file-upload">
+                    <input type="file" id="fileInput" accept=".txt,.log">
+                </div>
+                <textarea id="logInput" placeholder="请将日志内容粘贴在此处..."></textarea>
+                <button id="extractBtn">提取测试时间</button>
+            </div>
+            
+            <div class="result-section">
+                <div class="results-header">
+                    <h2 class="section-title">提取结果</h2>
+                    <button id="exportBtn" class="export-btn" style="display: none;">导出为CSV</button>
+                </div>
+                
+                <div id="summaryContainer" class="summary" style="display: none;"></div>
+                
+                <div id="resultContainer">
+                    <div class="no-results">结果将在这里显示</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logInput = document.getElementById('logInput');
+            const extractBtn = document.getElementById('extractBtn');
+            const fileInput = document.getElementById('fileInput');
+            const resultContainer = document.getElementById('resultContainer');
+            const summaryContainer = document.getElementById('summaryContainer');
+            const exportBtn = document.getElementById('exportBtn');
+            
+            // 文件上传处理
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        logInput.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            });
+            
+            // 提取测试时间
+            extractBtn.addEventListener('click', function() {
+                const logText = logInput.value.trim();
+                if (!logText) {
+                    alert('请输入日志内容');
+                    return;
+                }
+                
+                const testItems = extractTestTimes(logText);
+                displayResults(testItems);
+                
+                // 显示导出按钮
+                if (testItems.length > 0) {
+                    exportBtn.style.display = 'block';
+                    summaryContainer.style.display = 'block';
+                }
+            });
+            
+            // 导出为CSV
+            exportBtn.addEventListener('click', function() {
+                const table = document.querySelector('table');
+                if (!table) return;
+                
+                let csv = [];
+                const rows = table.querySelectorAll('tr');
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const row = [], cols = rows[i].querySelectorAll('td, th');
+                    
+                    for (let j = 0; j < cols.length; j++) {
+                        row.push(cols[j].innerText);
+                    }
+                    
+                    csv.push(row.join(','));
+                }
+                
+                const csvContent = "data:text/csv;charset=utf-8," + csv.join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "测试时间提取结果.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+            
+            // 提取测试时间的函数
+            function extractTestTimes(logText) {
+                const lines = logText.split('\n');
+                const testItems = [];
+                let currentTest = null;
+                
+                // 正则表达式匹配测试开始行
+                const testStartRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}).*开始测试\s+(.*?)\s*={2,}/;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const match = line.match(testStartRegex);
+                    
+                    if (match) {
+                        // 如果已经有正在进行的测试，记录它的结束时间
+                        if (currentTest) {
+                            currentTest.endTime = match[1]; // 当前测试的开始时间是上一个测试的结束时间
+                            testItems.push(currentTest);
+                        }
+                        
+                        // 开始新的测试
+                        currentTest = {
+                            name: match[2],
+                            startTime: match[1]
+                        };
+                    }
+                }
+                
+                // 处理最后一个测试项目
+                if (currentTest) {
+                    // 查找日志中的最后时间戳作为结束时间
+                    const lastLine = lines[lines.length - 1];
+                    const lastTimeMatch = lastLine.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})/);
+                    if (lastTimeMatch) {
+                        currentTest.endTime = lastTimeMatch[1];
+                    }
+                    testItems.push(currentTest);
+                }
+                
+                // 计算每个测试项目的耗时
+                testItems.forEach(item => {
+                    if (item.startTime && item.endTime) {
+                        const start = new Date(item.startTime.replace(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.(\d{3})/, '$1T$2.$3Z'));
+                        const end = new Date(item.endTime.replace(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.(\d{3})/, '$1T$2.$3Z'));
+                        item.duration = end - start; // 毫秒
+                    } else {
+                        item.duration = null;
+                    }
+                });
+                
+                return testItems;
+            }
+            
+            // 显示结果的函数
+            function displayResults(testItems) {
+                if (testItems.length === 0) {
+                    resultContainer.innerHTML = '<div class="no-results">未找到测试项目</div>';
+                    summaryContainer.style.display = 'none';
+                    exportBtn.style.display = 'none';
+                    return;
+                }
+                
+                let html = '<table>';
+                html += '<thead><tr><th>测试项目</th><th>开始时间</th><th>结束时间</th><th>耗时(秒)</th></tr></thead>';
+                html += '<tbody>';
+                
+                let totalDuration = 0;
+                let maxDuration = 0;
+                let maxDurationTest = '';
+                let minDuration = Infinity;
+                let minDurationTest = '';
+                
+                testItems.forEach(item => {
+                    let durationText = 'N/A';
+                    let durationClass = '';
+                    
+                    if (item.duration !== null) {
+                        const durationSeconds = (item.duration / 1000).toFixed(3);
+                        durationText = durationSeconds;
+                        
+                        // 根据耗时长度设置不同的颜色
+                        if (item.duration < 1000) {
+                            durationClass = 'duration-short';
+                        } else if (item.duration < 3000) {
+                            durationClass = 'duration-medium';
+                        } else {
+                            durationClass = 'duration-long';
+                        }
+                        
+                        // 统计信息
+                        totalDuration += item.duration;
+                        if (item.duration > maxDuration) {
+                            maxDuration = item.duration;
+                            maxDurationTest = item.name;
+                        }
+                        if (item.duration < minDuration) {
+                            minDuration = item.duration;
+                            minDurationTest = item.name;
+                        }
+                    }
+                    
+                    html += `<tr>
+                        <td>${item.name}</td>
+                        <td>${item.startTime}</td>
+                        <td>${item.endTime || 'N/A'}</td>
+                        <td class="${durationClass}">${durationText}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                resultContainer.innerHTML = html;
+                
+                // 显示统计信息
+                const avgDuration = totalDuration / testItems.length;
+                const totalSeconds = (totalDuration / 1000).toFixed(3);
+                const avgSeconds = (avgDuration / 1000).toFixed(3);
+                const maxSeconds = (maxDuration / 1000).toFixed(3);
+                const minSeconds = (minDuration / 1000).toFixed(3);
+                
+                summaryContainer.innerHTML = `
+                    <h3>测试统计信息</h3>
+                    <p>总测试项目数: ${testItems.length}</p>
+                    <p>总测试耗时: ${totalSeconds} 秒</p>
+                    <p>平均测试耗时: ${avgSeconds} 秒</p>
+                    <p>最长测试: ${maxDurationTest} (${maxSeconds} 秒)</p>
+                    <p>最短测试: ${minDurationTest} (${minSeconds} 秒)</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
