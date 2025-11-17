@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>测试项目时间提取工具</title>
+    <title>日志测试项目时间提取工具</title>
     <style>
         * {
             box-sizing: border-box;
@@ -26,6 +26,8 @@
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            display: flex;
+            min-height: 80vh;
         }
         
         header {
@@ -33,6 +35,7 @@
             color: white;
             padding: 20px;
             text-align: center;
+            width: 100%;
         }
         
         h1 {
@@ -47,20 +50,20 @@
             margin: 0 auto;
         }
         
-        .content {
-            display: flex;
-            flex-wrap: wrap;
+        .left-panel {
+            width: 380px;
             padding: 20px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #eaeaea;
+            display: flex;
+            flex-direction: column;
         }
         
-        .input-section, .result-section {
+        .right-panel {
             flex: 1;
-            min-width: 300px;
-            padding: 15px;
-        }
-        
-        .input-section {
-            border-right: 1px solid #eee;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
         
         .section-title {
@@ -71,16 +74,41 @@
             padding-bottom: 5px;
         }
         
-        textarea {
+        .file-upload {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .file-upload input[type="file"] {
             width: 100%;
-            height: 400px;
-            padding: 12px;
-            border: 1px solid #ddd;
+            height: 40px;
+            opacity: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            cursor: pointer;
+        }
+        
+        .file-upload label {
+            display: block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
             border-radius: 5px;
-            resize: vertical;
-            font-family: monospace;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .file-upload label:hover {
+            background-color: #2980b9;
+        }
+        
+        .file-name {
+            margin-top: 10px;
             font-size: 14px;
-            margin-bottom: 15px;
+            color: #666;
+            text-align: center;
         }
         
         button {
@@ -99,10 +127,6 @@
         
         button:hover {
             background-color: #2980b9;
-        }
-        
-        .file-upload {
-            margin-bottom: 15px;
         }
         
         table {
@@ -133,9 +157,10 @@
         
         .no-results {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             color: #7f8c8d;
             font-style: italic;
+            font-size: 18px;
         }
         
         .export-btn {
@@ -145,27 +170,6 @@
         
         .export-btn:hover {
             background-color: #219653;
-        }
-        
-        .instructions {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border-left: 4px solid #3498db;
-        }
-        
-        .instructions h3 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        
-        .instructions ul {
-            padding-left: 20px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
         }
         
         .duration-short {
@@ -184,20 +188,75 @@
         }
         
         .summary {
-            margin-bottom: 20px;
+            margin-top: 20px;
             padding: 15px;
             background-color: #f8f9fa;
-            border-radius: 5px;
+            border-radius: 8px;
             border-left: 4px solid #3498db;
         }
         
         .summary h3 {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             color: #2c3e50;
+            text-align: center;
         }
         
-        .summary p {
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-top: 3px solid;
+        }
+        
+        .stat-card.total-tests {
+            border-color: #3498db;
+        }
+        
+        .stat-card.total-duration {
+            border-color: #e74c3c;
+        }
+        
+        .stat-card.avg-duration {
+            border-color: #f39c12;
+        }
+        
+        .stat-card.max-duration {
+            border-color: #e74c3c;
+        }
+        
+        .stat-card.min-duration {
+            border-color: #9b59b6;
+        }
+        
+        .stat-value {
+            font-size: 22px;
+            font-weight: bold;
             margin-bottom: 5px;
+        }
+        
+        .stat-card.total-duration .stat-value {
+            color: #e74c3c;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .stat-project {
+            font-size: 13px;
+            color: #555;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .results-header {
@@ -207,14 +266,22 @@
             margin-bottom: 15px;
         }
         
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+        }
+        
         @media (max-width: 768px) {
-            .content {
+            .container {
                 flex-direction: column;
             }
             
-            .input-section {
+            .left-panel {
+                width: 100%;
                 border-right: none;
-                border-bottom: 1px solid #eee;
+                border-bottom: 1px solid #eaeaea;
             }
             
             .results-header {
@@ -225,43 +292,59 @@
     </style>
 </head>
 <body>
+    <header>
+        <h1>日志测试项目时间提取工具</h1>
+        <p class="description">提取日志中的测试项目及其开始时间、结束时间和耗时</p>
+    </header>
+    
     <div class="container">
-        <header>
-            <h1>日志测试项目时间提取工具</h1>
-            <p class="description">提取日志中的测试项目及其开始时间、结束时间和耗时</p>
-        </header>
-        
-        <div class="instructions">
-            <h3>使用说明</h3>
-            <ul>
-                <li>将日志内容粘贴到左侧文本区域，或直接上传日志文件</li>
-                <li>点击"提取测试时间"按钮进行分析</li>
-                <li>结果将以表格形式展示，包含测试项目、开始时间、结束时间和耗时</li>
-                <li>耗时根据时长以不同颜色显示：绿色(&lt;1秒)，橙色(1-3秒)，红色(&gt;3秒)</li>
-                <li>可以导出结果为CSV文件</li>
-            </ul>
+        <div class="left-panel">
+            <h2 class="section-title">选择日志文件</h2>
+            <div class="file-upload">
+                <input type="file" id="fileInput" accept=".txt,.log">
+                <label for="fileInput">选择日志文件</label>
+                <div class="file-name" id="fileName">未选择文件</div>
+            </div>
+            <button id="extractBtn">提取测试时间</button>
+            <button id="exportBtn" class="export-btn" style="display: none;">导出为CSV</button>
+            
+            <div id="summaryContainer" class="summary" style="display: none;">
+                <h3>测试统计信息</h3>
+                <div class="summary-grid">
+                    <div class="stat-card total-tests">
+                        <div class="stat-value" id="statTotalTests">0</div>
+                        <div class="stat-label">总测试项目数</div>
+                    </div>
+                    <div class="stat-card total-duration">
+                        <div class="stat-value" id="statTotalDuration">0.000 秒</div>
+                        <div class="stat-label">总测试耗时</div>
+                    </div>
+                    <div class="stat-card avg-duration">
+                        <div class="stat-value" id="statAvgDuration">0.000 秒</div>
+                        <div class="stat-label">平均测试耗时</div>
+                    </div>
+                    <div class="stat-card max-duration">
+                        <div class="stat-value" id="statMaxDuration">0.000 秒</div>
+                        <div class="stat-label">最长测试耗时</div>
+                        <div class="stat-project" id="statMaxProject">-</div>
+                    </div>
+                    <div class="stat-card min-duration">
+                        <div class="stat-value" id="statMinDuration">0.000 秒</div>
+                        <div class="stat-label">最短测试耗时</div>
+                        <div class="stat-project" id="statMinProject">-</div>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div class="content">
-            <div class="input-section">
-                <h2 class="section-title">输入日志</h2>
-                <div class="file-upload">
-                    <input type="file" id="fileInput" accept=".txt,.log">
-                </div>
-                <textarea id="logInput" placeholder="请将日志内容粘贴在此处..."></textarea>
-                <button id="extractBtn">提取测试时间</button>
+        <div class="right-panel">
+            <div class="results-header">
+                <h2 class="section-title">测试项目详情</h2>
             </div>
             
-            <div class="result-section">
-                <div class="results-header">
-                    <h2 class="section-title">提取结果</h2>
-                    <button id="exportBtn" class="export-btn" style="display: none;">导出为CSV</button>
-                </div>
-                
-                <div id="summaryContainer" class="summary" style="display: none;"></div>
-                
+            <div class="table-container">
                 <div id="resultContainer">
-                    <div class="no-results">结果将在这里显示</div>
+                    <div class="no-results">请选择日志文件并点击"提取测试时间"按钮</div>
                 </div>
             </div>
         </div>
@@ -269,41 +352,53 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const logInput = document.getElementById('logInput');
             const extractBtn = document.getElementById('extractBtn');
             const fileInput = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
             const resultContainer = document.getElementById('resultContainer');
             const summaryContainer = document.getElementById('summaryContainer');
             const exportBtn = document.getElementById('exportBtn');
+            
+            // 统计信息元素
+            const statTotalTests = document.getElementById('statTotalTests');
+            const statTotalDuration = document.getElementById('statTotalDuration');
+            const statAvgDuration = document.getElementById('statAvgDuration');
+            const statMaxDuration = document.getElementById('statMaxDuration');
+            const statMinDuration = document.getElementById('statMinDuration');
+            const statMaxProject = document.getElementById('statMaxProject');
+            const statMinProject = document.getElementById('statMinProject');
             
             // 文件上传处理
             fileInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        logInput.value = e.target.result;
-                    };
-                    reader.readAsText(file);
+                    fileName.textContent = file.name;
+                } else {
+                    fileName.textContent = "未选择文件";
                 }
             });
             
             // 提取测试时间
             extractBtn.addEventListener('click', function() {
-                const logText = logInput.value.trim();
-                if (!logText) {
-                    alert('请输入日志内容');
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert('请选择日志文件');
                     return;
                 }
                 
-                const testItems = extractTestTimes(logText);
-                displayResults(testItems);
-                
-                // 显示导出按钮
-                if (testItems.length > 0) {
-                    exportBtn.style.display = 'block';
-                    summaryContainer.style.display = 'block';
-                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const logText = e.target.result;
+                    const testItems = extractTestTimes(logText);
+                    displayResults(testItems);
+                    
+                    // 显示导出按钮
+                    if (testItems.length > 0) {
+                        exportBtn.style.display = 'block';
+                        summaryContainer.style.display = 'block';
+                    }
+                };
+                reader.readAsText(file);
             });
             
             // 导出为CSV
@@ -446,21 +541,20 @@
                 html += '</tbody></table>';
                 resultContainer.innerHTML = html;
                 
-                // 显示统计信息
+                // 更新统计信息
                 const avgDuration = totalDuration / testItems.length;
                 const totalSeconds = (totalDuration / 1000).toFixed(3);
                 const avgSeconds = (avgDuration / 1000).toFixed(3);
                 const maxSeconds = (maxDuration / 1000).toFixed(3);
                 const minSeconds = (minDuration / 1000).toFixed(3);
                 
-                summaryContainer.innerHTML = `
-                    <h3>测试统计信息</h3>
-                    <p>总测试项目数: ${testItems.length}</p>
-                    <p>总测试耗时: ${totalSeconds} 秒</p>
-                    <p>平均测试耗时: ${avgSeconds} 秒</p>
-                    <p>最长测试: ${maxDurationTest} (${maxSeconds} 秒)</p>
-                    <p>最短测试: ${minDurationTest} (${minSeconds} 秒)</p>
-                `;
+                statTotalTests.textContent = testItems.length;
+                statTotalDuration.textContent = `${totalSeconds} 秒`;
+                statAvgDuration.textContent = `${avgSeconds} 秒`;
+                statMaxDuration.textContent = `${maxSeconds} 秒`;
+                statMinDuration.textContent = `${minSeconds} 秒`;
+                statMaxProject.textContent = maxDurationTest;
+                statMinProject.textContent = minDurationTest;
             }
         });
     </script>
