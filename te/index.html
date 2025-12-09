@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专用格式RX数据提取器-修复版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', monospace;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 1px solid rgba(64, 156, 255, 0.2);
+        }
+        .header {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid rgba(0, 114, 255, 0.3);
+        }
+        .header::before {
+            content: '📡';
+            font-size: 36px;
+            position: absolute;
+            top: 15px;
+            left: 30px;
+            opacity: 0.8;
+        }
+        .header h1 {
+            font-size: 24px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .header p {
+            margin-top: 8px;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .debug-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            font-size: 11px;
+            color: #00ff9d;
+            border-bottom: 1px solid rgba(0, 255, 157, 0.2);
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
+        }
+        .format-hint {
+            background: rgba(0, 198, 255, 0.1);
+            border-left: 4px solid #00c6ff;
+            padding: 12px 15px;
+            margin: 15px 30px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #a0d2ff;
+            font-family: monospace;
+        }
+        .upload-area {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+        .upload-box {
+            border: 3px dashed rgba(0, 198, 255, 0.4);
+            border-radius: 10px;
+            padding: 40px 30px;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .upload-box:hover {
+            border-color: #00c6ff;
+            background: rgba(0, 198, 255, 0.15);
+            transform: translateY(-3px);
+        }
+        .upload-box.dragover {
+            border-color: #00c6ff;
+            background: rgba(0, 198, 255, 0.2);
+        }
+        .upload-icon {
+            font-size: 48px;
+            opacity: 0.8;
+        }
+        .upload-text {
+            font-size: 16px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .upload-hint {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        #fileInput {
+            display: none;
+        }
+        .results-area {
+            padding: 20px 30px;
+            background: #0f172a;
+            min-height: 400px;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(64, 156, 255, 0.2);
+        }
+        .results-title {
+            font-size: 18px;
+            color: #00c6ff;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .export-btn {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 114, 255, 0.4);
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(64, 156, 255, 0.2);
+        }
+        thead {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            color: white;
+        }
+        th {
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid rgba(0, 198, 255, 0.3);
+        }
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(64, 156, 255, 0.1);
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+        tbody tr:hover {
+            background: rgba(0, 198, 255, 0.05);
+        }
+        tbody tr:nth-child(even) {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .sn-col {
+            font-weight: bold;
+            color: #00c6ff;
+            letter-spacing: 0.5px;
+        }
+        .per-value {
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+        }
+        .per-good {
+            color: #00ff9d;
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid rgba(0, 255, 157, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            display: inline-block;
+            min-width: 60px;
+        }
+        .per-warning {
+            color: #ffcc00;
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid rgba(255, 204, 0, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            display: inline-block;
+            min-width: 60px;
+        }
+        .per-bad {
+            color: #ff4d4d;
+            background: rgba(255, 77, 77, 0.1);
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            border-radius: 4px;
+            padding: 4px 8px;
+            display: inline-block;
+            min-width: 60px;
+        }
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .no-data p:first-child {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #0f172a;
+            border-top: 3px solid #00c6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            gap: 10px;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            background: rgba(0, 198, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 198, 255, 0.2);
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00c6ff;
+        }
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        .file-counter {
+            position: absolute;
+            top: 15px;
+            right: 30px;
+            background: rgba(0, 255, 157, 0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>专用格式RX数据提取器-修复版</h1>
+            <p>修复多文件提取问题: 使用独立解析器确保数据完整</p>
+            <div class="file-counter" id="fileCounter">文件: 0</div>
+        </div>
+        
+        <div class="debug-panel" id="debugPanel"></div>
+        
+        <div class="format-hint">
+            <strong>格式:</strong> SN----11B_CH1--11G_CH6---11N_CH11 &nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>修复内容:</strong> 隔离正则状态 + 独立解析器 + 强制重置
+        </div>
+        
+        <div class="upload-area">
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">批量上传日志文件 (.text / .log)</div>
+                <div class="upload-hint">拖拽或点击选择多个文件 | 已修复lastIndex污染问题</div>
+            </div>
+            <input type="file" id="fileInput" multiple accept=".text,.log">
+        </div>
+        
+        <div class="results-area" id="resultsArea">
+            <div class="no-data">
+                <p>📂</p>
+                <p>请上传日志文件开始提取</p>
+                <p style="font-size: 13px; margin-top: 10px;">支持同时处理数百个文件</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let extractedData = [];
+        let processedFiles = 0;
+        let debugMode = false; // 设为true可查看详细解析日志
+
+        // DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const uploadBox = document.getElementById('uploadBox');
+        const resultsArea = document.getElementById('resultsArea');
+        const debugPanel = document.getElementById('debugPanel');
+        const fileCounter = document.getElementById('fileCounter');
+
+        // 调试日志
+        function logDebug(message) {
+            if (!debugMode) return;
+            const timestamp = new Date().toLocaleTimeString();
+            debugPanel.innerHTML += `[${timestamp}] ${message}<br>`;
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+        }
+
+        // 上传事件
+        uploadBox.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // 拖拽上传
+        uploadBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadBox.classList.add('dragover');
+        });
+        uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'));
+        uploadBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadBox.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // 处理文件 - 修复核心问题
+        async function handleFiles(files) {
+            const validFiles = Array.from(files).filter(f => 
+                f.name.endsWith('.text') || f.name.endsWith('.log')
+            );
+            
+            if (validFiles.length === 0) {
+                alert('请选择 .text 或 .log 格式的文件！');
+                return;
+            }
+
+            resultsArea.innerHTML = '<div class="no-data"><div class="loading"></div><p>正在解析文件...</p></div>';
+            
+            // 重置数据
+            extractedData = [];
+            processedFiles = 0;
+            fileCounter.textContent = `文件: 0/${validFiles.length}`;
+            
+            logDebug(`开始处理 ${validFiles.length} 个文件...`);
+
+            // 逐个处理文件，确保隔离
+            for (let i = 0; i < validFiles.length; i++) {
+                const file = validFiles[i];
+                logDebug(`\n--- 处理文件 #${i + 1}: ${file.name} ---`);
+                
+                try {
+                    const result = await parseFileSafely(file);
+                    if (result) {
+                        extractedData.push(result);
+                        logDebug(`✅ 成功: SN=${result.sn}, 11B=${formatPer(result.per11B)}, 11G=${formatPer(result.per11G)}, 11N=${formatPer(result.per11N)}`);
+                    } else {
+                        logDebug(`⚠️ 跳过: 未找到有效RX数据`);
+                    }
+                } catch (error) {
+                    logDebug(`❌ 错误: ${error.message}`);
+                    console.error(`解析 ${file.name} 失败:`, error);
+                }
+                
+                processedFiles++;
+                fileCounter.textContent = `文件: ${processedFiles}/${validFiles.length}`;
+            }
+
+            logDebug(`\n--- 处理完成: 共 ${extractedData.length} 条有效记录 ---`);
+            displayResults();
+        }
+
+        // 安全解析文件 - 完全隔离
+        async function parseFileSafely(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // 为每个文件创建独立的解析器实例
+                        const content = e.target.result;
+                        const result = createIsolatedParser(content, file.name);
+                        resolve(result);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsText(file);
+            });
+        }
+
+        // 创建隔离的解析器 - 核心修复
+        function createIsolatedParser(content, filename) {
+            logDebug(`解析文件: ${filename}, 内容长度: ${content.length} 字符`);
+            
+            // 提取SN
+            const snMatch = content.match(/LUA:\s+ReadSN\s*=\s*(\w+)/) ||
+                          content.match(/"key_value":"(\w+)"/);
+            const sn = snMatch ? snMatch[1] : "Unknown";
+            logDebug(`提取SN: ${sn}`);
+
+            // 为每个文件创建独立的正则表达式实例 - 避免lastIndex污染
+            const rxBlockPattern = new RegExp(
+                /开始测试\s+(WIFI_\w+_RX_\w+).*?wifi_rx_general.*?ch":"(\d+)".*?wifi_get_rx_packet.*?pack_rv":"(\d+)".*?PER:([\d.]+).*?State:2/.source,
+                'gs'
+            );
+            
+            const rxTests = [];
+            let match;
+            let matchCount = 0;
+            
+            while ((match = rxBlockPattern.exec(content)) !== null) {
+                matchCount++;
+                const testName = match[1];
+                const channel = match[2];
+                const per = parseFloat(match[4]);
+                
+                logDebug(`  匹配 #${matchCount}: ${testName}, 信道=${channel}, PER=${per}%`);
+                
+                rxTests.push({
+                    test_name: testName,
+                    channel: channel,
+                    per: per
+                });
+            }
+            
+            logDebug(`找到 ${matchCount} 个RX测试块`);
+
+            // 提取指定格式的三个值
+            const test11B = rxTests.find(t => 
+                t.test_name.includes('11B') && t.channel === '1'
+            );
+            const test11G = rxTests.find(t => 
+                t.test_name.includes('11G') && t.channel === '6'
+            );
+            const test11N = rxTests.find(t => 
+                t.test_name.includes('11N') && t.channel === '11'
+            );
+
+            const per11B = test11B ? test11B.per : null;
+            const per11G = test11G ? test11G.per : null;
+            const per11N = test11N ? test11N.per : null;
+
+            logDebug(`提取结果: 11B_CH1=${formatPer(per11B)}, 11G_CH6=${formatPer(per11G)}, 11N_CH11=${formatPer(per11N)}`);
+
+            // 如果三个值都为null，返回null表示无效数据
+            if (per11B === null && per11G === null && per11N === null) {
+                logDebug('无有效数据，跳过该文件');
+                return null;
+            }
+
+            return {
+                sn: sn,
+                file: filename,
+                per11B: per11B,
+                per11G: per11G,
+                per11N: per11N
+            };
+        }
+
+        // 显示结果
+        function displayResults() {
+            if (extractedData.length === 0) {
+                resultsArea.innerHTML = `
+                    <div class="no-data">
+                        <p>📭</p>
+                        <p>未找到符合格式的RX测试数据</p>
+                        <p style="font-size: 13px; margin-top: 10px;">请确保文件包含 11B_CH1, 11G_CH6, 11N_CH11 的测试</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 计算统计
+            const totalTests = extractedData.length;
+            const allPerValues = extractedData.flatMap(d => 
+                [d.per11B, d.per11G, d.per11N].filter(p => p !== null)
+            );
+            const avgPer = allPerValues.length > 0 ? 
+                allPerValues.reduce((a, b) => a + b, 0) / allPerValues.length : 0;
+
+            // 生成表格
+            const rows = extractedData.map((data, index) => {
+                const per11BClass = getPerClass(data.per11B);
+                const per11GClass = getPerClass(data.per11G);
+                const per11NClass = getPerClass(data.per11N);
+
+                return `
+                    <tr style="animation: fadeInUp 0.4s ease forwards; animation-delay: ${index * 0.05}s">
+                        <td class="sn-col">${data.sn}</td>
+                        <td class="per-value ${per11BClass}">${formatPer(data.per11B)}</td>
+                        <td class="per-value ${per11GClass}">${formatPer(data.per11G)}</td>
+                        <td class="per-value ${per11NClass}">${formatPer(data.per11N)}</td>
+                        <td style="font-size: 11px; color: #8892b0;">${data.file}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            resultsArea.innerHTML = `
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value">${totalTests}</div>
+                        <div class="stat-label">设备总数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${avgPer.toFixed(2)}%</div>
+                        <div class="stat-label">平均PER</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${allPerValues.length}</div>
+                        <div class="stat-label">有效测试数</div>
+                    </div>
+                </div>
+                
+                <div class="results-header">
+                    <div class="results-title">📊 提取结果: SN----11B_CH1--11G_CH6---11N_CH11</div>
+                    <button class="export-btn" onclick="exportResults()">📋 导出CSV</button>
+                </div>
+                
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>设备SN</th>
+                            <th>11B_CH1</th>
+                            <th>11G_CH6</th>
+                            <th>11N_CH11</th>
+                            <th>文件名</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 格式化PER值
+        function formatPer(value) {
+            if (value === null) return 'N/A';
+            return value.toFixed(2) + '%';
+        }
+
+        // 获取PER样式类
+        function getPerClass(value) {
+            if (value === null) return '';
+            if (value < 5) return 'per-good';
+            if (value < 10) return 'per-warning';
+            return 'per-bad';
+        }
+
+        // 导出结果
+        function exportResults() {
+            if (extractedData.length === 0) return;
+
+            const csvData = [];
+            csvData.push(['SN', '11B_CH1', '11G_CH6', '11N_CH11', '文件名']);
+
+            extractedData.forEach(data => {
+                csvData.push([
+                    data.sn,
+                    formatPer(data.per11B),
+                    formatPer(data.per11G),
+                    formatPer(data.per11N),
+                    data.file
+                ]);
+            });
+
+            const csvContent = csvData.map(row => 
+                row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')
+            ).join('\n');
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `RX专用格式_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        // 双击标题启用调试模式
+        document.querySelector('.header h1').addEventListener('dblclick', () => {
+            debugMode = !debugMode;
+            debugPanel.style.display = debugMode ? 'block' : 'none';
+            debugPanel.innerHTML = `<strong>调试模式:</strong> ${debugMode ? '已启用' : '已禁用'}<br>`;
+        });
+
+        // 页面加载提示
+        window.addEventListener('load', () => {
+            console.log('🔧 专用格式RX提取器 (修复版) 已加载');
+            console.log('✅ 修复: 1) 正则表达式隔离 2) 独立解析器 3) 强制状态重置');
+            console.log('📌 提取格式: SN----11B_CH1--11G_CH6---11N_CH11');
+            console.log('💡 双击标题可启用/禁用调试模式');
+        });
+    </script>
+</body>
+</html>
