@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTF测试值提取工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .upload-area {
+            border: 2px dashed #4299e1;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            background: #f0f8fb;
+        }
+        .upload-area input {
+            display: none;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #4299e1;
+            margin-bottom: 15px;
+        }
+        .upload-text {
+            color: #4a5568;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .upload-tip {
+            color: #718096;
+            font-size: 14px;
+        }
+        .result-area {
+            display: none;
+        }
+        .sn-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .sn-label {
+            font-weight: bold;
+            color: #2d3748;
+            margin-right: 10px;
+        }
+        .sn-value {
+            color: #4299e1;
+            font-size: 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background: #f8f9fa;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .mtf-value {
+            font-family: 'Courier New', monospace;
+        }
+        .status-success {
+            color: #48bb78;
+        }
+        .status-error {
+            color: #e53e3e;
+        }
+        .status-warning {
+            color: #ed8936;
+        }
+        .download-btn {
+            display: inline-block;
+            background: #4299e1;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .download-btn:hover {
+            background: #3182ce;
+        }
+        .error-message {
+            color: #e53e3e;
+            text-align: center;
+            padding: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MTF测试值提取工具</h1>
+        
+        <!-- 上传区域 -->
+        <div class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" accept=".log,.txt">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">点击或拖拽上传.log/.txt日志文件</div>
+            <div class="upload-tip">支持单个文件上传，自动提取SN及所有MTF测试值</div>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div class="error-message" id="errorMessage" style="display: none;"></div>
+        
+        <!-- 结果展示区域 -->
+        <div class="result-area" id="resultArea">
+            <div class="sn-info">
+                <span class="sn-label">设备SN：</span>
+                <span class="sn-value" id="snValue"></span>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <<th>测试序号</</th>
+                        <<th>测试时间</</th>
+                        <<th>MTF测试值（9个参数）</</th>
+                        <<th>测试状态</</th>
+                    </tr>
+                </thead>
+                <tbody id="mtfTableBody">
+                    <!-- 测试数据将动态插入这里 -->
+                </tbody>
+            </table>
+            
+            <button class="download-btn" id="downloadBtn">下载提取结果（CSV格式）</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultArea = document.getElementById('resultArea');
+        const snValue = document.getElementById('snValue');
+        const mtfTableBody = document.getElementById('mtfTableBody');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // 上传区域点击事件
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 拖拽事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '#e8f4f8';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = 'transparent';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'transparent';
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload(fileInput.files[0]);
+            }
+        });
+        
+        // 文件选择事件
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFileUpload(fileInput.files[0]);
+            }
+        });
+        
+        // 处理文件上传
+        function handleFileUpload(file) {
+            // 验证文件类型
+            if (!file.name.endsWith('.log') && !file.name.endsWith('.txt')) {
+                showError('请上传.log或.txt格式的日志文件');
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const logContent = e.target.result;
+                const { sn, mtfList } = parseLogContent(logContent);
+                
+                if (!sn) {
+                    showError('未从日志中提取到设备SN');
+                    return;
+                }
+                
+                if (mtfList.length === 0) {
+                    showError('未从日志中提取到MTF测试值');
+                    return;
+                }
+                
+                // 展示结果
+                showResult(sn, mtfList);
+            };
+            
+            reader.onerror = () => {
+                showError('文件读取失败，请重试');
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 解析日志内容
+        function parseLogContent(content) {
+            const lines = content.split('\n');
+            let sn = '';
+            const mtfList = [];
+            let testIndex = 0;
+            
+            // 提取SN（匹配 ReadSN = XXXX 格式）
+            const snRegex = /ReadSN\s*=\s*(\S+)/;
+            // 提取MTF测试值（匹配 message: 后面的数值列表）
+            const mtfRegex = /message:\s*(.+)/;
+            // 提取时间（匹配 [INFO ] 前面的时间戳）
+            const timeRegex = /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})/;
+            
+            lines.forEach(line => {
+                // 提取SN
+                if (!sn) {
+                    const snMatch = line.match(snRegex);
+                    if (snMatch && snMatch[1]) {
+                        sn = snMatch[1];
+                    }
+                }
+                
+                // 提取MTF值
+                const mtfMatch = line.match(mtfRegex);
+                if (mtfMatch && mtfMatch[1]) {
+                    testIndex++;
+                    const mtfContent = mtfMatch[1].trim();
+                    let status = 'success';
+                    let mtfValues = [];
+                    
+                    // 解析状态和数值
+                    if (mtfContent.includes('读取本地图片失败')) {
+                        status = 'error';
+                        mtfValues = ['读取图片失败'];
+                    } else if (mtfContent.includes('-inf')) {
+                        status = 'warning';
+                        mtfValues = mtfContent.split(',').filter(val => val && val !== '-inf');
+                    } else {
+                        // 提取数字（包含正负号和小数点）
+                        mtfValues = mtfContent.split(',').filter(val => /^-?\d+(\.\d+)?$/.test(val.trim()));
+                    }
+                    
+                    // 提取当前行的时间
+                    let time = '未知时间';
+                    const timeMatch = line.match(timeRegex);
+                    if (timeMatch && timeMatch[1]) {
+                        time = timeMatch[1];
+                    }
+                    
+                    mtfList.push({
+                        index: testIndex,
+                        time: time,
+                        values: mtfValues,
+                        status: status
+                    });
+                }
+            });
+            
+            return { sn, mtfList };
+        }
+        
+        // 显示错误信息
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+            resultArea.style.display = 'none';
+        }
+        
+        // 显示结果
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+            resultArea.style.display = 'none';
+        }
+        
+        // 显示结果
+        function showResult(sn, mtfList) {
+            errorMessage.style.display = 'none';
+            resultArea.style.display = 'block';
+            
+            // 设置SN值
+            snValue.textContent = sn;
+            
+            // 清空表格
+            mtfTableBody.innerHTML = '';
+            
+            // 填充表格
+            mtfList.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // 状态文本和样式
+                const statusMap = {
+                    success: { text: '正常', class: 'status-success' },
+                    warning: { text: '无效值', class: 'status-warning' },
+                    error: { text: '失败', class: 'status-error' }
+                };
+                const statusInfo = statusMap[item.status];
+                
+                // 格式化MTF值
+                const mtfText = item.values.length > 0 
+                    ? item.values.join(', ') 
+                    : '无有效数值';
+                
+                row.innerHTML = `
+                    <td>${item.index}</td>
+                    <td>${item.time}</td>
+                    <td class="mtf-value">${mtfText}</td>
+                    <td><span class="${statusInfo.class}">${statusInfo.text}</span></td>
+                `;
+                
+                mtfTableBody.appendChild(row);
+            });
+            
+            // 绑定下载事件
+            downloadBtn.onclick = () => {
+                downloadCSV(sn, mtfList);
+            };
+        }
+        
+        // 下载CSV文件
+        function downloadCSV(sn, mtfList) {
+            // 构建CSV内容
+            let csvContent = '测试序号,测试时间,MTF测试值,测试状态\n';
+            
+            const statusTextMap = {
+                success: '正常',
+                warning: '无效值',
+                error: '失败'
+            };
+            
+            mtfList.forEach(item => {
+                const mtfValues = item.values.join('; ');
+                const statusText = statusTextMap[item.status];
+                // 处理CSV中的特殊字符（逗号、引号）
+                const row = [
+                    item.index,
+                    `"${item.time}"`,
+                    `"${mtfValues}"`,
+                    `"${statusText}"`
+                ].join(',');
+                csvContent += row + '\n';
+            });
+            
+            // 创建Blob并下载
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${sn}_MTF测试值提取结果_${new Date().toLocaleDateString()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
